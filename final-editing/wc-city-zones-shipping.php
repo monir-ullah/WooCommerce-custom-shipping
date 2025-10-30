@@ -375,6 +375,41 @@ add_action('wp_footer', function () {
     <?php
 });
 
+add_action('woocommerce_cart_calculate_fees', function () {
+    if (is_admin() && !defined('DOING_AJAX'))
+        return;
+
+    // Hide fee on cart page, only add on checkout
+    if (is_cart()) {
+        return;
+    }
+
+    $enabled = get_option('wc_city_zones_enabled', 'no');
+    if ($enabled !== 'yes')
+        return;
+
+    $selected_zone = WC()->session->get('wc_city_zone');
+    if ($selected_zone === null || $selected_zone === '') {
+        $selected_zone = '0';
+        WC()->session->set('wc_city_zone', '0');
+    }
+
+    $data = get_option('wc_city_zones_main_repeater', '[]');
+    $zones = json_decode($data, true);
+
+    if (!is_array($zones) || empty($zones))
+        return;
+
+    $index = intval($selected_zone);
+    if (isset($zones[$index]['price']) && isset($zones[$index]['label'])) {
+        $cost = floatval($zones[$index]['price']);
+        $label = $zones[$index]['label'];
+        WC()->cart->add_fee($label, $cost);
+    }
+}, 20);
+
+
+
 // -----------------------------
 // Hide default shipping completely
 // -----------------------------
